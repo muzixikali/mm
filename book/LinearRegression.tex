@@ -204,18 +204,181 @@ $\mu=\begin{bmatrix}
   \label{Tab:2}
 \end{table}
 
+直接进行线性回归得到高数成绩(y)与高考数学成绩($x_1$)、学年平均绩点、性别($x_3)$之间的关系:
+\begin{equation}
+  y = 0.1711 x_1 +  15.3724 x_2  -3.1301 x_3 + 15.8701
+\end{equation}
+
+可以这样解释回归系数：学年平均绩点和性别相同时，高考数学成绩每相差10分，高数成绩平均相差1.711分；高考数学成绩和性别相同时，学年平均绩点每相差0.1，高数成绩平均相差1.53724分；高考数学成绩和学年平均绩点相同时，男同学的高数成绩比女同学平均要低3.1301分。
+
+为了探知三个因素中，哪个因素对高数成绩的影响最大，可以进行标准化的线性回归，得到回归方程：
+\begin{equation}
+  y = 0.3561 x_1 +  0.6158 x_2  -0.1665 x_3
+\end{equation}
+
+可知，学年平均绩点对高数成绩的影响最大。
+
+我们还可以通过可视化观察回归的误差，如\cref{Fig:2}所示。
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{线性回归分析}
+  \caption{线性回归的效果}\label{Fig:2}
+\end{figure}
+
+\appendix
+\section{Matlab代码}
+  \begin{lstlisting}[language=matlab,caption={蒙特卡洛模拟}]
+  clc,clear
+
+  % 构造数据的函数
+  f=@(x1,x2) 2*x1+5*x2+0.5;
+  % 蒙特卡洛模拟次数
+  times = 10000;
+  n = 100;
+  
+  % 记录相关系数和回归系数
+  r = ones(times,1);
+  k = ones(times,1);
+  for i=1:times
+      % 随机数据x1
+      x1 = -10+rand(n,1)*20;
+      % 与x1相关的遗漏变量x2
+      x2 = 0.3*x1+5*randn(size(x1,1),1);
+      % 原扰动误差
+      u0 = randn(n,1);
+      y = f(x1,x2)+u0;
+      % 遗漏变量x2进行回归
+      theta = LinearRegression(x1,y);
+      % 现扰动误差
+      u1 = u0+5*x2;
+      tmp = corrcoef(x1,u1);
+      r(i) = tmp(1,2);
+      k(i) = theta(2);
+  end
+  
+  %% 绘图
+  scatter(r,k);
+  xlabel("r_{x_1,\mu}","Interpreter","tex");
+  ylabel("k",Interpreter="tex",Rotation=0);
+  \end{lstlisting}
+
+  \begin{lstlisting}[language=matlab ,caption={自定义的线性回归函数} ]
+  function [theta,values] = LinearRegression(X,y)
+  % 线性回归
+      X = [ones(size(X,1),1),X];
+      theta = (transpose(X)*X)\transpose(X)*y;
+      values = X*theta;
+  end
+  \end{lstlisting}
+
+  \begin{lstlisting}[language=matlab ,caption={线性回归简单示例} ]
+clc,clear
+
+%% 读取数据
+data = readmatrix("data\高数成绩.csv","NumHeaderLines",1);
+X = data(:,1:3);
+y = data(:,4);
+
+%% 普通线性回归
+[theta,values] = LinearRegression(X,y);
+disp(theta);
+
+%% 标准化线性回归
+norm_X = normalize(X,1,"zscore");
+norm_y = normalize(y,1,"zscore");
+norm_theta = LinearRegression(norm_X,norm_y);
+disp(norm_theta);
+
+%% 比较真实值与回归值
+plot(1:size(data,1),values);
+hold on;
+plot(1:size(data,1),y);
+legend("回归值","真实值");
+  \end{lstlisting}
 
 
+\section{Python 代码}
+
+  \begin{lstlisting}[language=python ,caption=初始化 ]
+  # 导包
+  import matplotlib.pyplot as plt
+  import numpy as np
+  import pandas as pd
+  from sklearn.linear_model import LinearRegression
+  from sklearn.preprocessing import StandardScaler
+  
+  plt.rcParams["font.sans-serif"] = ["SimHei"]  #设置字体
+  plt.rcParams["axes.unicode_minus"] = False  # 解决图像中的“-”负号的乱码问题
+
+  # 导入数据
+  data = pd.read_csv("../data/高数成绩.csv", encoding="gbk")
+  display(data)
+
+  # 数据初始化
+  D = data.to_numpy()
+  X = D[:,0:3]
+  y = D[:,3]
+  display(X)
+  display(y)
+  \end{lstlisting}
 
 
+  \begin{lstlisting}[language=python ,caption={线性回归简单示例} ]
+  # 普通线性回归
+  model = LinearRegression()
+  model.fit(X, y)
+  print(model.coef_)
+  print(model.intercept_)
+  print(model.score(X, y))
 
+  # 比较真实值与回归值
+  y_predict = model.predict(X)
+  plt.plot(list(range(1, 21)), y)
+  plt.plot(list(range(1, 21)), y_predict)
+  plt.xticks(list(range(1, 21)))
+  plt.legend(["真实值", "预测值"])
 
+  # 标准化线性回归
+  std = StandardScaler()
+  n_X = std.fit_transform(X)
+  n_y = std.fit_transform(y.reshape(-1, 1))
+  n_model = LinearRegression()
+  n_model.fit(n_X, n_y)
+  print(n_model.coef_)
+  print(n_model.intercept_)
+  print(n_model.score(n_X, n_y))
+  \end{lstlisting}
 
-
-
-
-
-
-
-
+  \begin{lstlisting}[language=python ,caption={蒙特卡洛模拟探究内生性} ]
+  # 构造数据的函数
+  f = lambda a, b: 2 * a + 5 * b + 0.5
+  # 蒙特卡洛模拟次数
+  times = 10000
+  n = 100
+  
+  # 记录相关系数和回归系数
+  r = np.ones((times, 1))
+  k = np.ones((times, 1))
+  for i in range(times):
+      # 随机数据x1
+      x1 = -10 + np.random.rand(n, 1) * 20
+      # x1相关的遗漏变量x2
+      x2 = 0.3 * x1 + 5 * np.random.randn(x1.shape[0], 1)
+      # 原扰动误差
+      u0 = np.random.randn(n, 1)
+      y = f(x1, x2) + u0
+      # 遗漏变量x2进行回归
+      m_model = LinearRegression()
+      m_model.fit(x1, y)
+      # 现扰动误差
+      u1 = u0 + 5 * x2
+      tmp = np.corrcoef(x1[:, 0], u1[:, 0])
+      r[i] = tmp[0, 1]
+      k[i] = m_model.coef_[0]
+  
+  # 绘图
+  plt.scatter(r, k, 1)
+  plt.xlabel("$r_{x_1,\mu}$")
+  plt.ylabel("k")
+  \end{lstlisting}
 \end{document}
