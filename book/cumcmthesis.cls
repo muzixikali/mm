@@ -547,7 +547,7 @@ Just choose `xelatex', no `pdflatex' or `latex' and so on.}
 
 \RequirePackage{cite}	% 参考文献宏包
 \RequirePackage{colortbl}	% 表格阴影宏包
-\RequirePackage{subfigure}	% 多子图宏包
+\RequirePackage{subfig}	% 多子图宏包
 \RequirePackage{diagbox}	% 绘制斜线表头
 
 %%% 页脚页眉相关
